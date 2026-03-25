@@ -25,11 +25,18 @@ def compute_file_hash(path: str) -> str:
 def load_indexed(index_file: str = INDEXED_FILE) -> dict:
     if not os.path.exists(index_file):
         return {}
-    with open(index_file, "r") as f:
-        return json.load(f)
+    try:
+        with open(index_file, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        print(f"Warning: Could not read {index_file}, starting fresh")
+        return {}
 
 
 def save_indexed(data: dict, index_file: str = INDEXED_FILE) -> None:
+    parent = os.path.dirname(index_file)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(index_file, "w") as f:
         json.dump(data, f, indent=2)
 
