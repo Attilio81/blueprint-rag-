@@ -41,6 +41,7 @@ def extract_vision_chunks(pdf_path: str) -> list[dict]:
             page = doc[page_num]
             pix = page.get_pixmap(matrix=mat)
             image_bytes = pix.tobytes("png")  # in-memory, no temp files
+            del pix
 
             description = describe_page_with_vision(image_bytes)
             if description:
