@@ -1,0 +1,8 @@
+.env
+.env.local
+chroma_db/
+indexed.json
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
