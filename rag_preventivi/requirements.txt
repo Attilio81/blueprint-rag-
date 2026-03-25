@@ -1,0 +1,7 @@
+agno
+chromadb
+pymupdf
+google-generativeai
+python-dotenv
+Pillow
+pytest
