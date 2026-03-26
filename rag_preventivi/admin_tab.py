@@ -34,6 +34,8 @@ def get_document_status() -> list[dict]:
 
 def render_admin_tab() -> None:
     """Renders the document management tab UI."""
+    if msg := st.session_state.pop("delete_msg", None):
+        st.warning(msg)
     st.subheader("Gestione Documenti")
 
     # ── Upload PDF ───────────────────────────────────────────────────────────
@@ -93,7 +95,7 @@ def render_admin_tab() -> None:
                     if doc["name"] in indexed_data:
                         del indexed_data[doc["name"]]
                         save_indexed(indexed_data)
-                    st.warning(
+                    st.session_state["delete_msg"] = (
                         f"'{doc['name']}' eliminato. "
                         "Ri-indicizza per aggiornare il knowledge base."
                     )

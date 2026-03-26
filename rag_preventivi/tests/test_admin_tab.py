@@ -42,7 +42,8 @@ def test_get_document_status_corrupted():
 
 def test_get_document_status_empty():
     """Nessun PDF → lista vuota."""
-    with patch("admin_tab.list_pdf_files", return_value=[]):
+    with patch("admin_tab.list_pdf_files", return_value=[]), \
+         patch("admin_tab.load_indexed", return_value={}):
         from admin_tab import get_document_status
         result = get_document_status()
     assert result == []
