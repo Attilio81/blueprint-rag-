@@ -38,7 +38,7 @@ def build_chat_agent() -> Agent:
         search_knowledge=True,
         db=InMemoryDb(),
         add_history_to_context=True,
-        tools=[WebSearchTools(backend="duckduckgo")],
+        tools=[WebSearchTools()],
         instructions=[
             "Sei un assistente specializzato nell'analisi di preventivi edilizi.",
             f"Il progetto è {PROJECT_CONTEXT}.",
