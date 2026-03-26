@@ -7,7 +7,6 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-import os
 from pathlib import Path
 
 # Aggiunge rag_preventivi/ al path per gli import bare (config, agent, ...)
@@ -66,26 +65,30 @@ if prompt:
         full_text = ""
         sources = []
 
-        stream = st.session_state.agent.run(prompt, stream=True, stream_events=True)
+        try:
+            stream = st.session_state.agent.run(prompt, stream=True, stream_events=True)
 
-        for chunk in stream:
-            # Accumula i chunk di testo
-            if chunk.event == RunEvent.run_content and chunk.content:
-                full_text += chunk.content
-                placeholder.markdown(full_text + "▌")  # cursore animato
+            for chunk in stream:
+                # Accumula i chunk di testo
+                if chunk.event == RunEvent.run_content and chunk.content:
+                    full_text += chunk.content
+                    placeholder.markdown(full_text + "▌")  # cursore animato
 
-            # Estrai fonti dall'evento finale
-            elif chunk.event == RunEvent.run_completed:
-                refs = getattr(chunk, "references", None)
-                if refs:
-                    for ref in refs:
-                        docs = getattr(ref, "documents", [])
-                        for doc in docs:
-                            name = getattr(doc, "name", None) or str(doc)
-                            if name not in sources:
-                                sources.append(name)
+                # Estrai fonti dall'evento finale
+                elif chunk.event == RunEvent.run_completed:
+                    refs = getattr(chunk, "references", None)
+                    if refs:
+                        for ref in refs:
+                            docs = getattr(ref, "documents", [])
+                            for doc in docs:
+                                name = getattr(doc, "name", None) or str(doc)
+                                if name not in sources:
+                                    sources.append(name)
 
-        placeholder.markdown(full_text)  # rimuove cursore
+        except Exception as e:
+            full_text = full_text or f"_Errore durante la risposta: {e}_"
+
+        placeholder.markdown(full_text or "_Nessuna risposta ricevuta._")  # rimuove cursore
 
         if sources:
             with st.expander("Fonti"):
@@ -95,6 +98,6 @@ if prompt:
     # Salva nella cronologia
     st.session_state.messages.append({
         "role": "assistant",
-        "content": full_text,
+        "content": full_text or "_Nessuna risposta ricevuta._",
         "sources": sources,
     })
