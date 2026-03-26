@@ -1,7 +1,8 @@
 # ingestion/image_extractor.py
 import time
 import pymupdf
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from pathlib import Path
 from dotenv import load_dotenv
 from config import PAGE_DPI, VISION_MODEL, RATE_LIMIT_SECONDS
@@ -20,9 +21,12 @@ Sii preciso e strutturato. Non inventare dati non visibili."""
 
 def describe_page_with_vision(image_bytes: bytes) -> str:
     """Sends a PNG image to Gemini Vision and returns the description."""
-    model = genai.GenerativeModel(VISION_MODEL)
-    image_part = {"mime_type": "image/png", "data": image_bytes}
-    response = model.generate_content([VISION_PROMPT, image_part])
+    client = genai.Client()
+    image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+    response = client.models.generate_content(
+        model=VISION_MODEL,
+        contents=[VISION_PROMPT, image_part],
+    )
     return response.text.strip() if response.text else ""
 
 

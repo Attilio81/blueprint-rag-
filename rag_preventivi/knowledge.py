@@ -1,12 +1,12 @@
 from agno.knowledge.embedder.google import GeminiEmbedder
 from agno.knowledge.knowledge import Knowledge
 from agno.vectordb.chroma import ChromaDb
-from config import CHROMA_PATH, CHROMA_COLLECTION, EMBEDDING_MODEL, TOP_K_RESULTS
+from config import CHROMA_PATH, CHROMA_COLLECTION, EMBEDDING_MODEL, TOP_K_RESULTS, EMBEDDING_DIMENSIONS
 
 
 def build_knowledge() -> tuple[Knowledge, ChromaDb]:
-    """Costruisce e restituisce il knowledge base Agno + ChromaDb."""
-    embedder = GeminiEmbedder(id=EMBEDDING_MODEL)
+    """Builds and returns the Agno knowledge base + ChromaDb."""
+    embedder = GeminiEmbedder(id=EMBEDDING_MODEL, dimensions=EMBEDDING_DIMENSIONS)
     vector_db = ChromaDb(
         collection=CHROMA_COLLECTION,
         path=CHROMA_PATH,

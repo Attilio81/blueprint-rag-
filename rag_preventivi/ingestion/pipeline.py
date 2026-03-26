@@ -10,7 +10,7 @@ from agno.knowledge.document import Document
 from ingestion.text_extractor import extract_text_chunks, is_corrupted_pdf
 from ingestion.image_extractor import extract_vision_chunks
 from config import (
-    DOCUMENTS_DIR, INDEXED_FILE, EMBEDDING_MODEL,
+    DOCUMENTS_DIR, INDEXED_FILE, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS,
     CHROMA_PATH, CHROMA_COLLECTION,
 )
 
@@ -59,7 +59,10 @@ def _upsert_chunks(vector_db: ChromaDb, chunks: list[dict]) -> None:
         if c.get("content", "").strip()
     ]
     if documents:
-        vector_db.upsert(documents=documents)
+        # Build a deterministic content hash from all chunk contents
+        combined = "".join(c["content"] for c in chunks if c.get("content", "").strip())
+        content_hash = hashlib.sha256(combined.encode()).hexdigest()
+        vector_db.upsert(content_hash, documents)
 
 
 def list_pdf_files() -> list:
@@ -72,13 +75,15 @@ def run_ingestion(reindex: bool = False) -> None:
     Indexes all PDFs in DOCUMENTS_DIR.
     Skips already-indexed files unless reindex=True.
     """
-    embedder = GeminiEmbedder(id=EMBEDDING_MODEL)
+    embedder = GeminiEmbedder(id=EMBEDDING_MODEL, dimensions=EMBEDDING_DIMENSIONS)
     vector_db = ChromaDb(
         collection=CHROMA_COLLECTION,
         path=CHROMA_PATH,
         persistent_client=True,
         embedder=embedder,
     )
+    if not vector_db.exists():
+        vector_db.create()
 
     pdf_files = list_pdf_files()
     if not pdf_files:
