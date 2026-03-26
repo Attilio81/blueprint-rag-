@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from typing import Generator
 from dotenv import load_dotenv
 from agno.knowledge.embedder.google import GeminiEmbedder
 from agno.vectordb.chroma import ChromaDb
@@ -70,10 +71,10 @@ def list_pdf_files() -> list:
     return sorted(Path(DOCUMENTS_DIR).glob("*.pdf"))
 
 
-def run_ingestion(reindex: bool = False) -> None:
+def run_ingestion_streaming(reindex: bool = False) -> Generator[str, None, None]:
     """
-    Indexes all PDFs in DOCUMENTS_DIR.
-    Skips already-indexed files unless reindex=True.
+    Stesso comportamento di run_ingestion() ma fa yield dei log invece di stamparli.
+    Usata dalla UI Streamlit per mostrare il progresso in tempo reale.
     """
     embedder = GeminiEmbedder(id=EMBEDDING_MODEL, dimensions=EMBEDDING_DIMENSIONS)
     vector_db = ChromaDb(
@@ -87,7 +88,7 @@ def run_ingestion(reindex: bool = False) -> None:
 
     pdf_files = list_pdf_files()
     if not pdf_files:
-        print(f"No PDFs found in {DOCUMENTS_DIR}")
+        yield f"Nessun PDF trovato in {DOCUMENTS_DIR}"
         return
 
     indexed = load_indexed()
@@ -97,31 +98,34 @@ def run_ingestion(reindex: bool = False) -> None:
         current_hash = compute_file_hash(str(pdf_path))
 
         if not reindex and indexed.get(source) == current_hash:
-            print(f"[SKIP] {source} already indexed")
+            yield f"[SKIP] {source} già indicizzato"
             continue
 
-        print(f"\n[INGEST] {source}")
+        yield f"[INGEST] {source}"
         corrupted = is_corrupted_pdf(str(pdf_path))
 
-        # Pass 1: text (only if not corrupted)
         if not corrupted:
             text_chunks = extract_text_chunks(str(pdf_path))
-            print(f"  -> {len(text_chunks)} text chunks")
+            yield f"  → {len(text_chunks)} chunk testo"
             _upsert_chunks(vector_db, text_chunks)
         else:
-            print(f"  ! Corrupted PDF encoding -- skipping text, vision only")
+            yield "  ⚠ PDF corrotto — solo visione"
 
-        # Pass 2: vision (always)
         try:
             vision_chunks = extract_vision_chunks(str(pdf_path))
-            print(f"  -> {len(vision_chunks)} vision chunks")
+            yield f"  → {len(vision_chunks)} chunk visione"
             _upsert_chunks(vector_db, vision_chunks)
         except Exception as e:
-            print(f"  x Vision error for {source}: {e}")
+            yield f"  ✗ Errore visione: {e}"
 
-        # Update index
         indexed[source] = current_hash
         save_indexed(indexed)
-        print(f"  v {source} indexed")
+        yield f"  ✓ {source} indicizzato"
 
-    print("\nIngestion complete.")
+    yield "Indicizzazione completata."
+
+
+def run_ingestion(reindex: bool = False) -> None:
+    """Indexes all PDFs in DOCUMENTS_DIR. Skips already-indexed files unless reindex=True."""
+    for line in run_ingestion_streaming(reindex=reindex):
+        print(line)

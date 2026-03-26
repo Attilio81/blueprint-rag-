@@ -68,3 +68,49 @@ def test_run_ingestion_skips_already_indexed(mock_emb, mock_chroma, mock_vision,
 
     mock_text.assert_not_called()
     mock_vision.assert_not_called()
+
+
+from ingestion.pipeline import run_ingestion_streaming
+
+
+def test_run_ingestion_streaming_skip_already_indexed():
+    """PDF già indicizzati producono log [SKIP], non [INGEST]."""
+    mock_pdf = Path("/fake/doc.pdf")
+    with patch("ingestion.pipeline.list_pdf_files", return_value=[mock_pdf]), \
+         patch("ingestion.pipeline.compute_file_hash", return_value="abc123"), \
+         patch("ingestion.pipeline.load_indexed", return_value={"doc.pdf": "abc123"}), \
+         patch("ingestion.pipeline.GeminiEmbedder"), \
+         patch("ingestion.pipeline.ChromaDb") as mock_chroma:
+        mock_chroma.return_value.exists.return_value = True
+        logs = list(run_ingestion_streaming(reindex=False))
+    assert any("[SKIP]" in log for log in logs)
+    assert not any("[INGEST]" in log for log in logs)
+
+
+def test_run_ingestion_streaming_ingest_new():
+    """Nuovi PDF producono log [INGEST] e ✓ al completamento."""
+    mock_pdf = Path("/fake/new.pdf")
+    chunks = [{"content": "testo", "source": "new.pdf", "page": 1, "type": "text"}]
+    with patch("ingestion.pipeline.list_pdf_files", return_value=[mock_pdf]), \
+         patch("ingestion.pipeline.compute_file_hash", return_value="newHash"), \
+         patch("ingestion.pipeline.load_indexed", return_value={}), \
+         patch("ingestion.pipeline.save_indexed"), \
+         patch("ingestion.pipeline.is_corrupted_pdf", return_value=False), \
+         patch("ingestion.pipeline.extract_text_chunks", return_value=chunks), \
+         patch("ingestion.pipeline.extract_vision_chunks", return_value=[]), \
+         patch("ingestion.pipeline.GeminiEmbedder"), \
+         patch("ingestion.pipeline.ChromaDb") as mock_chroma:
+        mock_chroma.return_value.exists.return_value = True
+        logs = list(run_ingestion_streaming(reindex=False))
+    assert any("[INGEST]" in log for log in logs)
+    assert any("✓" in log for log in logs)
+
+
+def test_run_ingestion_streaming_no_pdfs():
+    """Nessun PDF produce un messaggio informativo."""
+    with patch("ingestion.pipeline.list_pdf_files", return_value=[]), \
+         patch("ingestion.pipeline.GeminiEmbedder"), \
+         patch("ingestion.pipeline.ChromaDb") as mock_chroma:
+        mock_chroma.return_value.exists.return_value = True
+        logs = list(run_ingestion_streaming())
+    assert any("Nessun PDF" in log for log in logs)
