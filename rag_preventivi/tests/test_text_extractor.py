@@ -33,3 +33,14 @@ def test_chunk_size_within_bounds():
     chunks = extract_text_chunks(str(SAMPLE_PDF))
     for chunk in chunks:
         assert len(chunk["content"]) <= CHUNK_SIZE * 1.5
+
+
+CORRUPTED_PDF = Path(__file__).parent.parent.parent / "Preventivi" / "PROT.31 IAB SOC.COOP._130125.pdf"
+
+def test_is_corrupted_pdf_detects_corrupted():
+    if not CORRUPTED_PDF.exists():
+        pytest.skip("Corrupted PDF not available")
+    result = is_corrupted_pdf(str(CORRUPTED_PDF))
+    # PROT.31 is NOT corrupted: all 6 pages have <1.2% non-ASCII chars (well below
+    # the 30% threshold used by is_corrupted_pdf), so it is a regular readable PDF.
+    assert result is False
