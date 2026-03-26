@@ -514,5 +514,19 @@ cd rag_preventivi && python -m pytest tests/ -v
 
 ---
 
+---
+
+## Roadmap
+
+| Priorità | Feature | Note |
+|----------|---------|------|
+| 🔜 | **Integrazione database SQL** | Collegare l'agente a un DB relazionale (es. storico ordini, anagrafica fornitori). L'agente potrà rispondere a domande che combinano i PDF con dati strutturati. |
+| 🔜 | **Supporto Excel (.xlsx)** | Aggiungere `excel_extractor.py` con `openpyxl` per indicizzare anche i fogli di calcolo. |
+| 💡 | **Supporto Word (.docx)** | Estendere la pipeline con `python-docx`. |
+| 💡 | **Interfaccia web** | Sostituire la CLI con una UI (es. Gradio o Streamlit) per utenti non tecnici. |
+| 💡 | **Multimodal embedding diretto** | Embeddare le immagini delle pagine direttamente con `gemini-embedding-2-preview` senza passare per la descrizione testuale, per retrieval ancora più accurato. |
+
+---
+
 *Progetto: Centro Commerciale Leonardo, Imola (BO) — Cliente IABGroup*
 *Stack: Python · Agno · DeepSeek · Gemini · ChromaDB · pymupdf*
