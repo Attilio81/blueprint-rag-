@@ -86,7 +86,7 @@ with tab_chat:
                         tool = getattr(chunk, "tool", None)
                         if tool and "search" in (getattr(tool, "tool_name", "") or "").lower():
                             content = getattr(tool, "content", "") or ""
-                            urls = re.findall(r'https?://[^\s"\'<>\)]+', content)
+                            urls = [u.rstrip(".,;:)]") for u in re.findall(r'https?://[^\s"\'<>\)]+', content)]
                             for url in urls:
                                 if url not in web_sources:
                                     web_sources.append(url)
