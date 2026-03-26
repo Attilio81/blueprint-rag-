@@ -9,15 +9,12 @@ from config import PROJECT_CONTEXT
 load_dotenv()
 
 
-def build_chat_agent() -> Agent:
-    """Agente con memoria di sessione in-memory per chat multi-turno."""
+def build_agent() -> Agent:
     knowledge, _ = build_knowledge()
     return Agent(
         model=DeepSeek(id="deepseek-chat"),
         knowledge=knowledge,
         search_knowledge=True,
-        db=InMemoryDb(),
-        add_history_to_context=True,
         instructions=[
             "Sei un assistente specializzato nell'analisi di preventivi edilizi.",
             f"Il progetto è {PROJECT_CONTEXT}.",
@@ -31,12 +28,15 @@ def build_chat_agent() -> Agent:
     )
 
 
-def build_agent() -> Agent:
+def build_chat_agent() -> Agent:
+    """Agente con memoria di sessione in-memory per chat multi-turno."""
     knowledge, _ = build_knowledge()
     return Agent(
         model=DeepSeek(id="deepseek-chat"),
         knowledge=knowledge,
         search_knowledge=True,
+        db=InMemoryDb(),
+        add_history_to_context=True,
         instructions=[
             "Sei un assistente specializzato nell'analisi di preventivi edilizi.",
             f"Il progetto è {PROJECT_CONTEXT}.",
