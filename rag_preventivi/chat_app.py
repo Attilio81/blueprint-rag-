@@ -35,6 +35,10 @@ if "messages" not in st.session_state:
     st.session_state.messages = []  # list of {"role", "content", "sources", "web_sources"}
 
 
+# ── Input utente (fuori dai tab: rimane sticky al fondo della viewport) ─────
+prompt = st.chat_input("Fai una domanda sui preventivi...")
+
+
 # ── Tabs ────────────────────────────────────────────────────────────────────
 tab_chat, tab_admin = st.tabs(["💬 Chat", "🗂 Gestione"])
 
@@ -51,9 +55,6 @@ with tab_chat:
                 with st.expander("🌐 Fonti web"):
                     for url in msg["web_sources"]:
                         st.markdown(f"- {url}")
-
-    # Input utente
-    prompt = st.chat_input("Fai una domanda sui preventivi...")
 
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt, "sources": [], "web_sources": []})
