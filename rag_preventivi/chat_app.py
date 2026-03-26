@@ -30,6 +30,7 @@ st.caption(f"Progetto: {PROJECT_CONTEXT}")
 if "agent" not in st.session_state:
     with st.spinner("Carico il knowledge base..."):
         st.session_state.agent = build_chat_agent()
+    st.session_state.messages = []  # reset history in sync with new agent session
 
 if "messages" not in st.session_state:
     st.session_state.messages = []  # list of {"role", "content", "sources", "web_sources"}
