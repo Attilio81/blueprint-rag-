@@ -12,3 +12,14 @@ def test_build_chat_agent_has_history_and_db():
         agent_instance = build_chat_agent()
     assert agent_instance.add_history_to_context is True
     assert isinstance(agent_instance.db, InMemoryDb)
+
+
+def test_build_chat_agent_has_web_search_tool():
+    """build_chat_agent deve avere almeno un tool configurato (WebSearchTools)."""
+    mock_knowledge = MagicMock()
+    mock_vector_db = MagicMock()
+    with patch("agent.build_knowledge", return_value=(mock_knowledge, mock_vector_db)):
+        from agent import build_chat_agent
+        agent_instance = build_chat_agent()
+    assert agent_instance.tools is not None
+    assert len(agent_instance.tools) >= 1
