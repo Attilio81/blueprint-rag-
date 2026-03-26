@@ -1,4 +1,5 @@
 # chat_app.py
+import re
 import sys
 from pathlib import Path
 
@@ -31,7 +32,7 @@ if "agent" not in st.session_state:
         st.session_state.agent = build_chat_agent()
 
 if "messages" not in st.session_state:
-    st.session_state.messages = []  # list of {"role", "content", "sources"}
+    st.session_state.messages = []  # list of {"role", "content", "sources", "web_sources"}
 
 
 # ── Tabs ────────────────────────────────────────────────────────────────────
@@ -43,15 +44,19 @@ with tab_chat:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             if msg.get("sources"):
-                with st.expander("Fonti"):
+                with st.expander("📄 Fonti documenti"):
                     for src in msg["sources"]:
                         st.markdown(f"- {src}")
+            if msg.get("web_sources"):
+                with st.expander("🌐 Fonti web"):
+                    for url in msg["web_sources"]:
+                        st.markdown(f"- {url}")
 
     # Input utente
     prompt = st.chat_input("Fai una domanda sui preventivi...")
 
     if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt, "sources": []})
+        st.session_state.messages.append({"role": "user", "content": prompt, "sources": [], "web_sources": []})
         with st.chat_message("user"):
             st.markdown(prompt)
 
@@ -59,6 +64,7 @@ with tab_chat:
             placeholder = st.empty()
             full_text = ""
             sources = []
+            web_sources = []
 
             try:
                 stream = st.session_state.agent.run(prompt, stream=True, stream_events=True)
@@ -76,6 +82,14 @@ with tab_chat:
                                     name = getattr(doc, "name", None) or str(doc)
                                     if name not in sources:
                                         sources.append(name)
+                    elif chunk.event == RunEvent.tool_call_completed:
+                        tool = getattr(chunk, "tool", None)
+                        if tool and "search" in (getattr(tool, "tool_name", "") or "").lower():
+                            content = getattr(tool, "content", "") or ""
+                            urls = re.findall(r'https?://[^\s"\'<>\)]+', content)
+                            for url in urls:
+                                if url not in web_sources:
+                                    web_sources.append(url)
 
             except Exception as e:
                 full_text = full_text or f"_Errore durante la risposta: {e}_"
@@ -83,14 +97,20 @@ with tab_chat:
             placeholder.markdown(full_text or "_Nessuna risposta ricevuta._")
 
             if sources:
-                with st.expander("Fonti"):
+                with st.expander("📄 Fonti documenti"):
                     for src in sources:
                         st.markdown(f"- {src}")
+
+            if web_sources:
+                with st.expander("🌐 Fonti web"):
+                    for url in web_sources:
+                        st.markdown(f"- {url}")
 
         st.session_state.messages.append({
             "role": "assistant",
             "content": full_text or "_Nessuna risposta ricevuta._",
             "sources": sources,
+            "web_sources": web_sources,
         })
 
 with tab_admin:
