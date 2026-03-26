@@ -182,7 +182,9 @@ Tu: "Qual è il prezzo del prodotto X nel preventivo?"
 | **Database vettoriale** | Archivia e cerca per similarità | `ChromaDB` (locale, nessun server) |
 | **Knowledge base** | Collega embedding e ricerca | `Agno` framework |
 | **Modello di chat** | Genera la risposta finale | `DeepSeek Chat` |
-| **CLI** | Interfaccia utente a riga di comando | Python `argparse` + `input()` |
+| **Interfaccia web** | Chat + gestione documenti nel browser | `Streamlit` |
+| **Ricerca web** | Trova fornitori e alternative online | `DuckDuckGo` via `ddgs` (no API key) |
+| **CLI** | Interfaccia alternativa a riga di comando | Python `argparse` + `input()` |
 | **Deduplicazione** | Evita di re-indicizzare PDF già visti | SHA-256 hash + `indexed.json` |
 
 ---
@@ -200,19 +202,23 @@ C:\Progetti Pilota\EsploraPreventivi\
 ├── rag_preventivi\              ← Il codice del sistema
 │   ├── config.py                ← Impostazioni (modelli, soglie, path)
 │   ├── knowledge.py             ← Configura ChromaDB + GeminiEmbedder
-│   ├── agent.py                 ← Crea l'agente DeepSeek
-│   ├── main.py                  ← Punto di ingresso (lo esegui tu)
+│   ├── agent.py                 ← Crea l'agente DeepSeek + WebSearchTools
+│   ├── chat_app.py              ← Interfaccia web Streamlit (avvia con streamlit run)
+│   ├── admin_tab.py             ← Tab "Gestione": lista, upload, indicizza, elimina
+│   ├── main.py                  ← CLI alternativa (argparse + input())
 │   │
 │   ├── ingestion\               ← Pipeline di indicizzazione
 │   │   ├── text_extractor.py    ← Estrae testo con pymupdf
 │   │   ├── image_extractor.py   ← Visione pagine con Gemini
-│   │   └── pipeline.py          ← Orchestrazione + deduplicazione
+│   │   └── pipeline.py          ← Orchestrazione + deduplicazione + streaming log
 │   │
-│   └── tests\                   ← Test automatici (14 test)
+│   └── tests\                   ← Test automatici (23 test)
 │       ├── conftest.py
 │       ├── test_text_extractor.py
 │       ├── test_image_extractor.py
-│       └── test_pipeline.py
+│       ├── test_pipeline.py
+│       ├── test_agent.py
+│       └── test_admin_tab.py
 │
 ├── chroma_db\                   ← Database vettoriale (auto-creato)
 ├── indexed.json                 ← Registro dei PDF già indicizzati
@@ -266,7 +272,7 @@ Apri un terminale nella cartella del progetto e digita:
 pip install -r rag_preventivi/requirements.txt
 ```
 
-Questo installa: agno, chromadb, pymupdf, google-generativeai, python-dotenv, Pillow, pytest.
+Questo installa: agno, chromadb, pymupdf, google-generativeai, python-dotenv, Pillow, pytest, streamlit, ddgs.
 
 ### Passo 4 — Verifica l'installazione
 
@@ -344,14 +350,50 @@ Per ogni pagina di ogni PDF, il sistema fa **due passaggi**:
 
 ## 8. Fare domande all'agente
 
-### Avviare la chat
+Hai due modalità: **interfaccia web** (raccomandato) e **CLI** (terminale).
+
+---
+
+### Interfaccia web — Streamlit (raccomandato)
+
+```bash
+cd "C:\Progetti Pilota\EsploraPreventivi\rag_preventivi"
+streamlit run chat_app.py
+```
+
+Si apre automaticamente il browser su `http://localhost:8501`. Trovi due tab:
+
+**Tab "💬 Chat"** — scrivi le domande nella casella in basso e ottieni risposte in streaming:
+- Le fonti RAG appaiono nell'expander **📄 Fonti documenti**
+- Se hai chiesto una ricerca web, gli URL appaiono nell'expander **🌐 Fonti web**
+- La conversazione ha memoria multi-turno (puoi fare domande di seguito)
+
+**Tab "🗂 Gestione"** — gestisci i PDF senza toccare il filesystem:
+- Lista documenti con stato (✅ Indicizzato / ⏳ Non indicizzato / ⚠️ Corrotto)
+- Upload di nuovi PDF tramite drag & drop
+- Bottone "▶️ Indicizza nuovi" con log in tempo reale
+- Bottone "🔄 Re-indicizza tutto"
+- Pulsante 🗑️ per eliminare un documento
+
+---
+
+### Ricerca web su richiesta
+
+L'agente può cercare sul web quando glielo chiedi esplicitamente. Usa parole come:
+- "Cercami sul web fornitori di serramenti in PVC"
+- "Trova alternative online per questo prodotto"
+- "Quali aziende vendono lo stesso articolo?"
+
+Per domande sui preventivi, usa sempre il knowledge base (non va su internet da solo).
+
+---
+
+### CLI — riga di comando (alternativa)
 
 ```bash
 cd "C:\Progetti Pilota\EsploraPreventivi\rag_preventivi"
 python main.py
 ```
-
-Vedrai:
 
 ```
 === Agente RAG Preventivi ===
@@ -360,35 +402,36 @@ Digita 'exit' per uscire.
 Tu: _
 ```
 
-Digita la tua domanda in italiano e premi Invio.
+Digita la tua domanda in italiano e premi Invio. Digita `exit` o `quit` per uscire.
+
+---
 
 ### Esempi di domande
 
 **Prezzi e quantità:**
 ```
-Tu: Qual è il prezzo del prodotto X?
-Tu: Qual è il totale del preventivo del fornitore Y?
-Tu: Elenca tutti i prodotti con il loro prezzo
+Qual è il prezzo del prodotto X?
+Qual è il totale del preventivo del fornitore Y?
+Elenca tutti i prodotti con il loro prezzo
 ```
 
 **Fornitori:**
 ```
-Tu: Chi sono i fornitori del progetto?
-Tu: Chi fornisce le insegne luminose?
-Tu: Quali sono i contatti del fornitore X?
+Chi sono i fornitori del progetto?
+Chi fornisce le insegne luminose?
+Quali sono i contatti del fornitore X?
 ```
 
 **Elementi tecnici:**
 ```
-Tu: Che sistema di facciata continua è previsto?
-Tu: Dimensioni del prodotto X dalla scheda tecnica
-Tu: Com'è descritto il prospetto principale?
+Che sistema di facciata continua è previsto?
+Dimensioni del prodotto X dalla scheda tecnica
 ```
 
-**Confronti e analisi:**
+**Ricerca web:**
 ```
-Tu: Quale preventivo ha il totale più alto?
-Tu: Ci sono informazioni sulle tempistiche di consegna?
+Trovami fornitori alternativi per questo tipo di infissi
+Cerca sul web il prezzo medio del calcestruzzo C25/30
 ```
 
 ### Come leggere la risposta
@@ -400,26 +443,26 @@ Il prodotto X ha un prezzo di **€ XXX,XX IVA esclusa**.
 
 Fonte: Fornitore A, preventivo_fornitore_a.pdf
 
----
-
 Sono disponibili anche le taglie:
 - Taglia S: dimensioni, peso → € [prezzo]
-- Taglia L: dimensioni, peso → € [prezzo]
 (da analisi immagine)
 ```
 
 > La dicitura **"(da analisi immagine)"** indica che l'informazione viene
 > da un chunk visione — l'AI ha visto la pagina come immagine, non come testo.
 
-### Uscire dalla chat
-
-Digita `exit`, `quit` oppure premi `Ctrl+C`.
-
 ---
 
 ## 9. Aggiungere nuovi documenti
 
-### Aggiungere un PDF
+### Metodo 1 — Interfaccia web (più semplice)
+
+1. Apri l'app Streamlit (`streamlit run chat_app.py`)
+2. Vai nella tab "🗂 Gestione"
+3. Trascina il PDF nel campo upload — viene copiato automaticamente in `Preventivi\`
+4. Clicca "▶️ Indicizza nuovi" — il log mostra il progresso in tempo reale
+
+### Metodo 2 — CLI
 
 1. Copia il PDF nella cartella `Preventivi\`
 2. Esegui l'indicizzazione:
@@ -497,13 +540,16 @@ Bisogna aggiungere un nuovo estrattore in `ingestion/`. Per Excel con `openpyxl`
 # Prima installazione
 pip install -r rag_preventivi/requirements.txt
 
-# Indicizzare i PDF (prima volta o nuovi PDF)
+# Avviare l'interfaccia web (raccomandato)
+streamlit run rag_preventivi/chat_app.py
+
+# Indicizzare i PDF via CLI (prima volta o nuovi PDF)
 python rag_preventivi/main.py --ingest-only
 
-# Re-indicizzare tutto da zero
+# Re-indicizzare tutto da zero via CLI
 python rag_preventivi/main.py --reindex --ingest-only
 
-# Avviare la chat
+# Avviare la chat CLI (alternativa alla web)
 python rag_preventivi/main.py
 
 # Eseguire i test automatici
@@ -516,14 +562,15 @@ cd rag_preventivi && python -m pytest tests/ -v
 
 ## Roadmap
 
-| Priorità | Feature | Note |
-|----------|---------|------|
+| Stato | Feature | Note |
+|-------|---------|------|
+| ✅ | **Interfaccia web Streamlit** | Chat streaming + tab Gestione documenti |
+| ✅ | **Ricerca web su richiesta** | DuckDuckGo via `ddgs`, solo su richiesta esplicita |
 | 🔜 | **Integrazione database SQL** | Collegare l'agente a un DB relazionale (es. storico ordini, anagrafica fornitori). L'agente potrà rispondere a domande che combinano i PDF con dati strutturati. |
 | 🔜 | **Supporto Excel (.xlsx)** | Aggiungere `excel_extractor.py` con `openpyxl` per indicizzare anche i fogli di calcolo. |
 | 💡 | **Supporto Word (.docx)** | Estendere la pipeline con `python-docx`. |
-| 💡 | **Interfaccia web** | Sostituire la CLI con una UI (es. Gradio o Streamlit) per utenti non tecnici. |
 | 💡 | **Multimodal embedding diretto** | Embeddare le immagini delle pagine direttamente con `gemini-embedding-2-preview` senza passare per la descrizione testuale, per retrieval ancora più accurato. |
 
 ---
 
-*Stack: Python · Agno · DeepSeek · Gemini · ChromaDB · pymupdf*
+*Stack: Python · Agno · DeepSeek · Gemini · ChromaDB · pymupdf · Streamlit · DuckDuckGo*
