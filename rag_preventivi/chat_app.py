@@ -11,6 +11,7 @@ load_dotenv()
 import streamlit as st
 from agno.agent import RunEvent
 from agent import build_chat_agent
+from admin_tab import render_admin_tab
 from config import PROJECT_CONTEXT
 
 
@@ -33,64 +34,64 @@ if "messages" not in st.session_state:
     st.session_state.messages = []  # list of {"role", "content", "sources"}
 
 
-# ── Mostra storico conversazione ────────────────────────────────────────────
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        if msg.get("sources"):
-            with st.expander("Fonti"):
-                for src in msg["sources"]:
-                    st.markdown(f"- {src}")
+# ── Tabs ────────────────────────────────────────────────────────────────────
+tab_chat, tab_admin = st.tabs(["💬 Chat", "🗂 Gestione"])
 
+with tab_chat:
+    # Mostra storico conversazione
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+            if msg.get("sources"):
+                with st.expander("Fonti"):
+                    for src in msg["sources"]:
+                        st.markdown(f"- {src}")
 
-# ── Input utente ────────────────────────────────────────────────────────────
-prompt = st.chat_input("Fai una domanda sui preventivi...")
+    # Input utente
+    prompt = st.chat_input("Fai una domanda sui preventivi...")
 
-if prompt:
-    # Mostra messaggio utente
-    st.session_state.messages.append({"role": "user", "content": prompt, "sources": []})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt, "sources": []})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-    # Streaming risposta agente
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_text = ""
-        sources = []
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            full_text = ""
+            sources = []
 
-        try:
-            stream = st.session_state.agent.run(prompt, stream=True, stream_events=True)
+            try:
+                stream = st.session_state.agent.run(prompt, stream=True, stream_events=True)
 
-            for chunk in stream:
-                # Accumula i chunk di testo
-                if chunk.event == RunEvent.run_content and chunk.content:
-                    full_text += chunk.content
-                    placeholder.markdown(full_text + "▌")  # cursore animato
+                for chunk in stream:
+                    if chunk.event == RunEvent.run_content and chunk.content:
+                        full_text += chunk.content
+                        placeholder.markdown(full_text + "▌")  # cursore animato
+                    elif chunk.event == RunEvent.run_completed:
+                        refs = getattr(chunk, "references", None)
+                        if refs:
+                            for ref in refs:
+                                docs = getattr(ref, "documents", [])
+                                for doc in docs:
+                                    name = getattr(doc, "name", None) or str(doc)
+                                    if name not in sources:
+                                        sources.append(name)
 
-                # Estrai fonti dall'evento finale
-                elif chunk.event == RunEvent.run_completed:
-                    refs = getattr(chunk, "references", None)
-                    if refs:
-                        for ref in refs:
-                            docs = getattr(ref, "documents", [])
-                            for doc in docs:
-                                name = getattr(doc, "name", None) or str(doc)
-                                if name not in sources:
-                                    sources.append(name)
+            except Exception as e:
+                full_text = full_text or f"_Errore durante la risposta: {e}_"
 
-        except Exception as e:
-            full_text = full_text or f"_Errore durante la risposta: {e}_"
+            placeholder.markdown(full_text or "_Nessuna risposta ricevuta._")
 
-        placeholder.markdown(full_text or "_Nessuna risposta ricevuta._")  # rimuove cursore
+            if sources:
+                with st.expander("Fonti"):
+                    for src in sources:
+                        st.markdown(f"- {src}")
 
-        if sources:
-            with st.expander("Fonti"):
-                for src in sources:
-                    st.markdown(f"- {src}")
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": full_text or "_Nessuna risposta ricevuta._",
+            "sources": sources,
+        })
 
-    # Salva nella cronologia
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": full_text or "_Nessuna risposta ricevuta._",
-        "sources": sources,
-    })
+with tab_admin:
+    render_admin_tab()
