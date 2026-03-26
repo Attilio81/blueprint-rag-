@@ -1,12 +1,5 @@
 # chat_app.py
 import sys
-import io
-
-# Fix encoding su Windows
-if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-
 from pathlib import Path
 
 # Aggiunge rag_preventivi/ al path per gli import bare (config, agent, ...)
