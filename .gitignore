@@ -1,7 +1,25 @@
+# API keys e segreti
 .env
 .env.local
+
+# PDF sorgente (dati sensibili)
+Preventivi/
+
+# Database vettoriale (generato localmente)
 chroma_db/
 indexed.json
+
+# Visualizzazioni (contengono testo dei chunk)
+kb_*.html
+
+# Documentazione interna di progetto
+docs/
+PRD_RAG_Agent_Preventivi.md
+
+# Session data Claude Code
+.claude/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo

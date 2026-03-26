@@ -16,3 +16,6 @@ EMBEDDING_MODEL = "gemini-embedding-2-preview"
 EMBEDDING_DIMENSIONS = 3072
 RATE_LIMIT_SECONDS = 1.0
 NON_ASCII_THRESHOLD = 0.30
+
+# Descrizione del progetto — personalizza questo campo per il tuo caso d'uso
+PROJECT_CONTEXT = "il tuo progetto edilizio"

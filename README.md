@@ -32,7 +32,7 @@ Un modello di linguaggio come ChatGPT è addestrato su miliardi di testi trovati
 Sa moltissime cose di carattere generale. Ma **non conosce i tuoi documenti** —
 i tuoi preventivi, le tue offerte, i tuoi schemi tecnici.
 
-Se gli chiedi "Qual è il prezzo della fioriera ONICE nel preventivo Metalco?",
+Se gli chiedi "Qual è il prezzo del prodotto X nel preventivo del fornitore Y?",
 non sa rispondere. O peggio: inventa una risposta plausibile ma sbagliata.
 Questo si chiama **allucinazione**.
 
@@ -70,20 +70,19 @@ esatte della domanda.
 
 ## 2. Il problema che risolve questo progetto
 
-Il progetto **Centro Commerciale Leonardo di Imola** (cliente IABGroup) ha accumulato
-diversi preventivi da fornitori diversi, in formati diversi:
+Un progetto edilizio tipico accumula diversi preventivi da fornitori diversi, in formati diversi:
 
 | Documento | Contenuto |
 |-----------|-----------|
-| `ONICE.pdf` | Scheda prodotto fioriere Metalco con prezzi e dimensioni |
-| `PROT.31 IAB SOC.COOP._130125.pdf` | Preventivo Metalco per forniture |
-| `prev (2).pdf` | Preventivo Adriatica Neon — insegne (NORD, OVEST, SUD) |
-| `24-0546.pdf` | Offerta Metro Infissi — facciata continua Schüco |
-| `0475.pdf` | Adria System — contropareti e lavori edili |
-| `LEONARDO_IMOLA Prospetto NORD/OVEST/SUD.pdf` | Disegni tecnici facciata |
-| `prev.pdf` | Offerta verde/giardino |
+| `scheda_prodotto.pdf` | Scheda prodotto con prezzi e dimensioni |
+| `preventivo_fornitore_a.pdf` | Preventivo Fornitore A per forniture |
+| `offerta_insegne.pdf` | Offerta insegne e segnaletica |
+| `offerta_facciata.pdf` | Offerta facciata continua |
+| `preventivo_edile.pdf` | Preventivo lavori edili |
+| `disegni_tecnici.pdf` | Disegni tecnici di facciata |
+| `offerta_verde.pdf` | Offerta verde/giardino |
 
-Senza il sistema, per rispondere a "Qual è il totale delle insegne per il prospetto Nord?"
+Senza il sistema, per rispondere a domande come "Qual è il totale delle insegne?"
 bisognava aprire ogni PDF, cercare manualmente, fare calcoli.
 
 **Con il sistema**, si scrive la domanda in italiano e si ottiene la risposta in pochi secondi,
@@ -100,9 +99,9 @@ con indicato il documento sorgente.
                     └─────────────────────────────────────────┘
 
 Preventivi/
-├── ONICE.pdf ──────────────────────────────────────────────────────────┐
-├── 24-0546.pdf ─────────────────────────────────────────────────────── │
-├── prev (2).pdf ──────────────────────────────────────────────────── ──│
+├── scheda_prodotto.pdf ────────────────────────────────────────────────┐
+├── offerta_facciata.pdf ───────────────────────────────────────────── │
+├── preventivo_fornitore.pdf ────────────────────────────────────────── │
 └── ... altri PDF ...                                                    │
                                                                          ▼
                                             ┌────────────────────────────────┐
@@ -140,18 +139,18 @@ Preventivi/
                     │        (ogni volta che fai domande)     │
                     └─────────────────────────────────────────┘
 
-Tu: "Qual è il prezzo della fioriera ONICE Ø1200?"
+Tu: "Qual è il prezzo del prodotto X nel preventivo?"
           │
           ▼
 ┌─────────────────────┐        ┌──────────────────────────────────────────┐
 │ La domanda diventa  │        │  ChromaDB cerca i 6 chunk più simili     │
 │ anche lei un vettore│──────► │  per significato alla domanda            │
-│ di 3072 numeri      │        │  ("ONICE", "Ø1200", "prezzo", "fioriera")│
+│ di 3072 numeri      │        │  ("prodotto X", "prezzo", "preventivo")  │
 └─────────────────────┘        └───────────────────┬──────────────────────┘
                                                     │
                                                     │  Restituisce i chunk più rilevanti:
-                                                    │  "0300720 ONICE fioriera D=1200..."
-                                                    │  "Prezzo: € 746,20 IVA esclusa..."
+                                                    │  "Codice prodotto X, dimensioni..."
+                                                    │  "Prezzo: € XXX,XX IVA esclusa..."
                                                     │  ...
                                                     ▼
                                     ┌───────────────────────────────┐
@@ -167,9 +166,8 @@ Tu: "Qual è il prezzo della fioriera ONICE Ø1200?"
                                     └───────────────────────────────┘
                                                     │
                                                     ▼
-                                    "La fioriera ONICE Ø1200 costa
-                                     € 746,20 IVA esclusa.
-                                     Fonte: Metalco SRL (PROT.31...)"
+                                    "Il prodotto X costa € XXX,XX IVA esclusa.
+                                     Fonte: Fornitore A (preventivo_fornitore_a.pdf)"
 ```
 
 ---
@@ -195,8 +193,8 @@ Tu: "Qual è il prezzo della fioriera ONICE Ø1200?"
 C:\Progetti Pilota\EsploraPreventivi\
 │
 ├── Preventivi\                  ← I tuoi PDF (metti qui i nuovi)
-│   ├── ONICE.pdf
-│   ├── 24-0546.pdf
+│   ├── scheda_prodotto.pdf
+│   ├── preventivo_fornitore.pdf
 │   └── ...
 │
 ├── rag_preventivi\              ← Il codice del sistema
@@ -297,23 +295,23 @@ python main.py --ingest-only
 **Cosa succede:**
 
 ```
-[INGEST] ONICE.pdf
+[INGEST] scheda_prodotto.pdf
   → 8 chunk testo
   → 2 chunk vision
-  ✓ ONICE.pdf indicizzato
+  ✓ scheda_prodotto.pdf indicizzato
 
-[INGEST] 24-0546.pdf
+[INGEST] preventivo_fornitore.pdf
   → 20 chunk testo
   → 5 chunk vision
-  ✓ 24-0546.pdf indicizzato
+  ✓ preventivo_fornitore.pdf indicizzato
 
-[SKIP] prev (2).pdf già indicizzato    ← PDF non modificato, viene saltato
+[SKIP] offerta_insegne.pdf già indicizzato    ← PDF non modificato, viene saltato
 ...
 Ingestion completata.
 ```
 
 **Quanto ci vuole?**
-Per 9 PDF (come nel progetto attuale): circa 3-5 minuti.
+Per una decina di PDF: circa 3-5 minuti.
 Il sistema processa ~1 pagina al secondo (limite di sicurezza dell'API Gemini).
 
 ### Re-indicizzare tutto da zero
@@ -356,7 +354,7 @@ python main.py
 Vedrai:
 
 ```
-=== Agente RAG Preventivi Leonardo ===
+=== Agente RAG Preventivi ===
 Digita 'exit' per uscire.
 
 Tu: _
@@ -368,8 +366,8 @@ Digita la tua domanda in italiano e premi Invio.
 
 **Prezzi e quantità:**
 ```
-Tu: Qual è il prezzo della fioriera ONICE Ø1200?
-Tu: Qual è il totale del preventivo Metro Infissi?
+Tu: Qual è il prezzo del prodotto X?
+Tu: Qual è il totale del preventivo del fornitore Y?
 Tu: Elenca tutti i prodotti con il loro prezzo
 ```
 
@@ -377,14 +375,14 @@ Tu: Elenca tutti i prodotti con il loro prezzo
 ```
 Tu: Chi sono i fornitori del progetto?
 Tu: Chi fornisce le insegne luminose?
-Tu: Quali sono i contatti di Adria System?
+Tu: Quali sono i contatti del fornitore X?
 ```
 
 **Elementi tecnici:**
 ```
 Tu: Che sistema di facciata continua è previsto?
-Tu: Dimensioni della fioriera ONICE dalla scheda tecnica
-Tu: Com'è il prospetto Nord del Centro Commerciale?
+Tu: Dimensioni del prodotto X dalla scheda tecnica
+Tu: Com'è descritto il prospetto principale?
 ```
 
 **Confronti e analisi:**
@@ -398,15 +396,15 @@ Tu: Ci sono informazioni sulle tempistiche di consegna?
 L'agente cita sempre la fonte:
 
 ```
-La fioriera ONICE Ø1200 ha un prezzo di **€ 746,20 IVA esclusa**.
+Il prodotto X ha un prezzo di **€ XXX,XX IVA esclusa**.
 
-Fonte: Metalco SRL, PROT.31 IAB SOC.COOP._130125.pdf
+Fonte: Fornitore A, preventivo_fornitore_a.pdf
 
 ---
 
 Sono disponibili anche le taglie:
-- Ø800 mm, H 480 mm, 278 kg → € [prezzo]
-- Ø1500 mm, H 760 mm, 1361 kg → € [prezzo]
+- Taglia S: dimensioni, peso → € [prezzo]
+- Taglia L: dimensioni, peso → € [prezzo]
 (da analisi immagine)
 ```
 
@@ -528,5 +526,4 @@ cd rag_preventivi && python -m pytest tests/ -v
 
 ---
 
-*Progetto: Centro Commerciale Leonardo, Imola (BO) — Cliente IABGroup*
 *Stack: Python · Agno · DeepSeek · Gemini · ChromaDB · pymupdf*
