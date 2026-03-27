@@ -112,6 +112,7 @@ def test_cerca_fornitori():
 
     assert result[0]["ragione_sociale"] == "Ferramenta Rossi SRL"
     assert "LIKE" in mock_q.call_args[0][0].upper()
+    assert "v_fornitori" in mock_q.call_args[0][0].lower()
 
 
 def test_cerca_fornitori_per_piva():
@@ -129,6 +130,7 @@ def test_cerca_clienti():
         result = cerca_clienti("bianchi")
 
     assert result[0]["nome_listino"] == "Listino Base"
+    assert "v_clienti" in mock_q.call_args[0][0].lower()
 
 
 def test_cerca_clienti_vuota():
