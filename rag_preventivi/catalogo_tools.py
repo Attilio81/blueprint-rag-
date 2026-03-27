@@ -19,7 +19,14 @@ def _fmt(results: list[dict]) -> str:
     """Serializza risultati come JSON compatto (leggibile dal modello)."""
     if not results:
         return "Nessun risultato trovato."
-    return json.dumps(results, ensure_ascii=False, indent=2)
+
+    def _default(obj):
+        import datetime
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+    return json.dumps(results, ensure_ascii=False, indent=2, default=_default)
 
 
 class CatalogoTools(Toolkit):

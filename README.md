@@ -192,6 +192,9 @@ Tu: "Qual è il prezzo del prodotto X nel preventivo?"
 | **Ricerca web** | Trova fornitori e alternative online | `DuckDuckGo` via `ddgs` (no API key) |
 | **CLI** | Interfaccia alternativa a riga di comando | Python `argparse` + `input()` |
 | **Deduplicazione** | Evita di re-indicizzare PDF già visti | SHA-256 hash + `indexed.json` |
+| **MCP Server** | Espone 7 tool di ricerca sul DB ordini/fornitori | `FastMCP` + `pyodbc` (read-only) |
+| **CatalogoTools** | Integra la ricerca DB nell'agente Agno (sync) | wrapper diretto su `search.py` |
+| **Embedding articoli** | Ricerca semantica nel catalogo prodotti | ChromaDB `iab_articoli` + GeminiEmbedder |
 
 ---
 
@@ -208,7 +211,8 @@ C:\Progetti Pilota\EsploraPreventivi\
 ├── rag_preventivi\              ← Il codice del sistema
 │   ├── config.py                ← Impostazioni (modelli, soglie, path, vision provider, prompt)
 │   ├── knowledge.py             ← Configura ChromaDB + GeminiEmbedder
-│   ├── agent.py                 ← Crea l'agente DeepSeek + WebSearchTools
+│   ├── agent.py                 ← Crea l'agente DeepSeek + WebSearchTools + CatalogoTools
+│   ├── catalogo_tools.py        ← Toolkit Agno per ricerca nel catalogo (wrapper sync su search.py)
 │   ├── chat_app.py              ← Interfaccia web Streamlit (avvia con streamlit run)
 │   ├── admin_tab.py             ← Tab "Gestione": lista, upload, indicizza, elimina
 │   ├── main.py                  ← CLI alternativa (argparse + input())
@@ -226,10 +230,23 @@ C:\Progetti Pilota\EsploraPreventivi\
 │       ├── test_agent.py
 │       └── test_admin_tab.py
 │
-├── chroma_db\                   ← Database vettoriale (auto-creato)
+├── mcp_preventivi\              ← Server MCP + ricerca nel catalogo
+│   ├── server.py                ← FastMCP server con 7 tool read-only
+│   ├── search.py                ← Funzioni di ricerca: articoli, fornitori, prezzi, codici
+│   ├── db.py                    ← Helper connessione pyodbc (contextlib.closing)
+│   ├── embeddings.py            ← GeminiEmbedder + ChromaDB per ricerca semantica articoli
+│   ├── index_articoli.py        ← Script per indicizzare il catalogo (--limit N per parziale)
+│   ├── visualizza_embeddings.py ← Mappa UMAP 2D interattiva degli embedding (HTML)
+│   ├── requirements.txt
+│   └── tests\
+│       ├── test_search.py       ← Test TDD per tutte le funzioni di ricerca
+│       └── test_embeddings.py   ← Test TDD per la ricerca semantica
+│
+├── chroma_db\                   ← Database vettoriale preventivi (auto-creato)
 ├── indexed.json                 ← Registro dei PDF già indicizzati
-├── .env                         ← Le tue chiavi API (non condividere!)
-├── .gitignore                   ← Protegge .env e chroma_db da git
+├── .env                         ← Chiavi API + stringa di connessione DB (non condividere!)
+├── .gitignore                   ← Protegge .env, chroma_db e .chroma_iab da git
+├── start.bat                    ← Avvia tutto con un doppio clic
 └── README.md                    ← Questo file
 ```
 
@@ -247,9 +264,12 @@ C:\Progetti Pilota\EsploraPreventivi\
 
 ```bash
 pip install -r rag_preventivi/requirements.txt
+pip install -r mcp_preventivi/requirements.txt
 ```
 
-Installa: agno, chromadb, pymupdf, google-generativeai, openai, python-dotenv, Pillow, pytest, streamlit, ddgs.
+`rag_preventivi`: agno, chromadb, pymupdf, google-generativeai, openai, python-dotenv, Pillow, pytest, streamlit, ddgs.
+
+`mcp_preventivi`: fastmcp, pyodbc, chromadb, google-generativeai, python-dotenv.
 
 ### Passo 2 — Ottieni le chiavi API
 
@@ -279,6 +299,9 @@ Nella cartella `C:\Progetti Pilota\EsploraPreventivi\` crea un file `.env`:
 GOOGLE_API_KEY=AIzaSy...la_tua_chiave...
 DEEPSEEK_API_KEY=sk-...la_tua_chiave...
 
+# Connessione al database ordini/fornitori (per mcp_preventivi)
+IAB_DB_CONNECTION_STRING=Driver={ODBC Driver 17 for SQL Server};Server=...;Database=...;UID=...;PWD=...
+
 # Solo se usi VISION_PROVIDER = "openai"
 # OPENAI_API_KEY=sk-...la_tua_chiave...
 ```
@@ -292,7 +315,26 @@ DEEPSEEK_API_KEY=sk-...la_tua_chiave...
 3. Avvia il server locale: vai in "Developer" → "Start Server"
 4. Il server gira su `http://localhost:1234`
 
-### Passo 5 — Verifica l'installazione
+### Passo 5 — Indicizza il catalogo articoli (opzionale, per la ricerca semantica)
+
+Se vuoi che l'agente possa trovare articoli nel catalogo anche per sinonimo o concetto,
+esegui l'indicizzazione degli embedding:
+
+```bash
+cd mcp_preventivi
+python index_articoli.py
+```
+
+Per un test rapido con i primi 100 articoli:
+
+```bash
+python index_articoli.py --limit 100
+```
+
+> Richiede `IAB_DB_CONNECTION_STRING` nel `.env`. Se non configurata, il resto del sistema
+> funziona comunque — solo la ricerca semantica non sarà disponibile.
+
+### Passo 6 — Verifica l'installazione
 
 ```bash
 cd rag_preventivi
@@ -436,7 +478,17 @@ Hai due modalità: **interfaccia web** (raccomandato) e **CLI** (terminale).
 
 ---
 
-### Interfaccia web — Streamlit (raccomandato)
+### Avvio rapido — start.bat (raccomandato)
+
+Fai doppio clic su `start.bat` nella cartella principale. Apre automaticamente:
+1. Il server MCP Preventivi in una finestra separata
+2. L'interfaccia Streamlit nel browser su `http://localhost:8501`
+
+Per fermare tutto: chiudi le due finestre del terminale.
+
+---
+
+### Interfaccia web — Streamlit (manuale)
 
 ```bash
 cd "C:\Progetti Pilota\EsploraPreventivi\rag_preventivi"
@@ -490,7 +542,7 @@ Digita la tua domanda in italiano e premi Invio. Digita `exit` o `quit` per usci
 
 ### Esempi di domande
 
-**Prezzi e quantità:**
+**Prezzi e quantità dai preventivi:**
 ```
 Qual è il prezzo del prodotto X?
 Qual è il totale del preventivo del fornitore Y?
@@ -508,6 +560,14 @@ Quali sono i contatti del fornitore X?
 ```
 Che sistema di facciata continua è previsto?
 Dimensioni del prodotto X dalla scheda tecnica
+```
+
+**Confronto con il catalogo interno:**
+```
+Questo articolo è nel nostro catalogo? C'è un prezzo migliore?
+Confronta i fornitori per il codice articolo VITE-M6
+Trova il codice fornitore ROS-VM6-20 nel catalogo
+Cerca fornitori alternativi per "bullone inox M8"
 ```
 
 **Ricerca web:**
@@ -683,9 +743,16 @@ Bisogna aggiungere un nuovo estrattore in `ingestion/`. Per Excel con `openpyxl`
 ```bash
 # Prima installazione
 pip install -r rag_preventivi/requirements.txt
+pip install -r mcp_preventivi/requirements.txt
 
-# Avviare l'interfaccia web (raccomandato)
+# Avviare tutto con un clic (server MCP + Streamlit)
+start.bat
+
+# Avviare solo l'interfaccia web (manuale)
 streamlit run rag_preventivi/chat_app.py
+
+# Avviare solo il server MCP (manuale)
+cd mcp_preventivi && python server.py
 
 # Indicizzare i PDF via CLI (prima volta o nuovi PDF)
 python rag_preventivi/main.py --ingest-only
@@ -696,8 +763,15 @@ python rag_preventivi/main.py --reindex --ingest-only
 # Avviare la chat CLI (alternativa alla web)
 python rag_preventivi/main.py
 
+# Indicizzare il catalogo articoli per ricerca semantica
+cd mcp_preventivi && python index_articoli.py
+
+# Visualizzare la mappa UMAP degli embedding articoli
+cd mcp_preventivi && python visualizza_embeddings.py
+
 # Eseguire i test automatici
 cd rag_preventivi && python -m pytest tests/ -v
+cd mcp_preventivi && python -m pytest tests/ -v
 
 # Verificare il modello caricato in LM Studio
 curl http://localhost:1234/v1/models
@@ -714,11 +788,11 @@ curl http://localhost:1234/v1/models
 | ✅ | **Vision provider configurabile** | LM Studio (locale) / Gemini / OpenAI — si cambia una riga in `config.py` |
 | ✅ | **Chunking separator-aware** | Rispetta paragrafi, righe di tabella e parole — nessun taglio a metà riga |
 | ✅ | **Vision prompt parametrizzabile** | Personalizzabile per dominio in `config.py` |
-| 🔜 | **MCP SQL — confronto Ordini Fornitori** | Collegare l'agente a un DB relazionale tramite MCP server. L'agente potrà confrontare i prezzi dei preventivi PDF con gli ordini fornitori già emessi, rilevare scostamenti e rispondere a domande che combinano documenti e dati strutturati. |
+| ✅ | **MCP SQL — confronto catalogo fornitori** | FastMCP server con 7 tool read-only su DB ordini/fornitori. `CatalogoTools` integra la ricerca nell'agente Agno (sync). Ricerca semantica degli articoli via ChromaDB + GeminiEmbedder. Visualizzazione UMAP 2D degli embedding. |
 | 🔜 | **Supporto Excel (.xlsx)** | Aggiungere `excel_extractor.py` con `openpyxl` per indicizzare anche i fogli di calcolo. |
 | 💡 | **Supporto Word (.docx)** | Estendere la pipeline con `python-docx`. |
 | 💡 | **Embedding locale** | Sostituire Gemini embedding con FastEmbed `bge-m3` per privacy totale e zero costi. |
 
 ---
 
-*Stack: Python · Agno · DeepSeek · Gemini Embedding · ChromaDB · pymupdf · Streamlit · DuckDuckGo · LM Studio (Qwen3.5)*
+*Stack: Python · Agno · DeepSeek · Gemini Embedding · ChromaDB · pymupdf · Streamlit · DuckDuckGo · FastMCP · pyodbc · UMAP · LM Studio (Qwen3.5)*

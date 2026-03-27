@@ -499,6 +499,68 @@ citando le fonti web trovate.
 
 ---
 
+---
+
+## Il confronto con il catalogo interno — come funziona
+
+Oltre ai preventivi PDF, il sistema può interrogare direttamente il **database ordini e fornitori** dell'azienda. Questo permette di rispondere a domande come:
+
+> *"Questo articolo è nel nostro catalogo? Quanto l'abbiamo pagato l'ultima volta?"*
+> *"Ci sono fornitori alternativi per questa vite?"*
+
+### I due "cervelli" in parallelo
+
+Quando fai una domanda che riguarda il catalogo, l'agente usa due strumenti diversi:
+
+```
+La tua domanda
+     │
+     ├─► RAG (ChromaDB)          ← cerca nei preventivi PDF
+     │
+     └─► CatalogoTools           ← cerca nel database SQL
+              │
+              ├─ cerca_articoli_catalogo      → ricerca per codice/descrizione/barcode
+              ├─ cerca_per_codice_fornitore   → trova articolo dal codice del fornitore
+              ├─ confronta_fornitori          → prezzi di tutti i fornitori per un articolo
+              └─ cerca_fornitori              → cerca per ragione sociale o P.IVA
+```
+
+L'agente capisce da solo quale strumento usare in base alle parole che usi:
+
+| Se chiedi... | L'agente usa... |
+|--------------|-----------------|
+| "Qual è il prezzo nel preventivo?" | RAG (PDF) |
+| "Questo articolo è nel catalogo?" | CatalogoTools |
+| "Confronta i fornitori per questo articolo" | CatalogoTools |
+| "Il codice ROS-VM6 a chi appartiene?" | CatalogoTools |
+| "Trova alternative online" | Ricerca web |
+
+### Il server MCP — cos'è
+
+Il **server MCP** (Model Context Protocol) è un mini-servizio che gira in background
+e mette a disposizione gli strumenti di ricerca sul database. Puoi vederlo come
+un "traduttore" tra l'agente AI e il database SQL dell'azienda.
+
+Funziona in **sola lettura** — non può modificare nulla nel database.
+
+Quando avvii `start.bat`, il server parte automaticamente e l'agente può usarlo
+senza che tu debba fare nulla.
+
+### Ricerca semantica nel catalogo
+
+Il sistema può anche trovare articoli per **significato**, non solo per parola esatta.
+
+**Esempio:**
+- Cerchi "bullone inox testa esagonale M8"
+- Il catalogo contiene "VITE ES. M8 ACCIAIO INOX A2 DIN 933"
+- Il sistema capisce che parlano della stessa cosa
+
+Questo funziona grazie a un secondo database di embedding (separato da quello dei preventivi)
+che contiene le "coordinate GPS" di ogni articolo del catalogo. Quando cerchi, il sistema
+trova gli articoli con significato più vicino alla tua ricerca.
+
+---
+
 ## Riepilogo finale
 
 | Domanda | Risposta semplice |
@@ -511,3 +573,5 @@ citando le fonti web trovate.
 | **I dati escono dal PC?** | Solo per l'embedding (Gemini) e la chat (DeepSeek), mai i PDF interi |
 | **Quanto ci vuole per indicizzare?** | ~2-5 minuti per 10 PDF di media lunghezza |
 | **Bisogna re-indicizzare ogni volta?** | No, solo quando aggiungi nuovi PDF |
+| **Può accedere al nostro database?** | Sì, in sola lettura — solo se configurato il file `.env` |
+| **Il database viene modificato?** | Mai — il sistema è completamente read-only |
