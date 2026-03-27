@@ -43,3 +43,27 @@ def cerca_articoli(query_text: str) -> list[dict]:
     where = " AND ".join(blocks)
     sql = f"SELECT TOP 50 * FROM dbo.v_articoli WHERE {where} ORDER BY codart"
     return db.query(sql, tuple(params))
+
+
+def cerca_fornitori(query_text: str) -> list[dict]:
+    """Cerca fornitori per ragione sociale o P.IVA (multi-token LIKE)."""
+    tokens = query_text.strip().split()
+    if not tokens:
+        return []
+    where, params = _like_tokens(
+        tokens, ["ragione_sociale", "ISNULL(partita_iva,'')"]
+    )
+    sql = f"SELECT TOP 50 * FROM dbo.v_fornitori WHERE {where} ORDER BY ragione_sociale"
+    return db.query(sql, tuple(params))
+
+
+def cerca_clienti(query_text: str) -> list[dict]:
+    """Cerca clienti per ragione sociale o P.IVA (multi-token LIKE)."""
+    tokens = query_text.strip().split()
+    if not tokens:
+        return []
+    where, params = _like_tokens(
+        tokens, ["ragione_sociale", "ISNULL(partita_iva,'')"]
+    )
+    sql = f"SELECT TOP 50 * FROM dbo.v_clienti WHERE {where} ORDER BY ragione_sociale"
+    return db.query(sql, tuple(params))

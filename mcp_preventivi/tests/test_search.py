@@ -84,3 +84,54 @@ def test_cerca_articoli_token_multipli():
     # con 3 token deve avere 3 blocchi di condizioni
     params = mock_q.call_args[0][1]
     assert len(params) == 9  # 3 token × 3 campi (codart, descrizione, barcodes)
+
+
+FORNITORE_SAMPLE = {
+    "conto": 9010001,
+    "ragione_sociale": "Ferramenta Rossi SRL",
+    "partita_iva": "01234567890",
+    "email": "info@rossi.it",
+    "telefono": "051123456",
+    "citta": "Bologna",
+}
+
+CLIENTE_SAMPLE = {
+    "conto": 5010001,
+    "ragione_sociale": "Edilizia Bianchi SPA",
+    "partita_iva": "09876543210",
+    "email": "acquisti@bianchi.it",
+    "codice_listino": 1,
+    "nome_listino": "Listino Base",
+}
+
+
+def test_cerca_fornitori():
+    with _mock_query([FORNITORE_SAMPLE]) as mock_q:
+        from search import cerca_fornitori
+        result = cerca_fornitori("rossi")
+
+    assert result[0]["ragione_sociale"] == "Ferramenta Rossi SRL"
+    assert "LIKE" in mock_q.call_args[0][0].upper()
+
+
+def test_cerca_fornitori_per_piva():
+    with _mock_query([FORNITORE_SAMPLE]) as mock_q:
+        from search import cerca_fornitori
+        cerca_fornitori("01234567890")
+
+    params = mock_q.call_args[0][1]
+    assert "%01234567890%" in params
+
+
+def test_cerca_clienti():
+    with _mock_query([CLIENTE_SAMPLE]) as mock_q:
+        from search import cerca_clienti
+        result = cerca_clienti("bianchi")
+
+    assert result[0]["nome_listino"] == "Listino Base"
+
+
+def test_cerca_clienti_vuota():
+    with _mock_query([]) as _:
+        from search import cerca_clienti
+        assert cerca_clienti("") == []
