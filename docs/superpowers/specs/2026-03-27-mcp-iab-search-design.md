@@ -1,4 +1,4 @@
-# MCP IAB Search — Design Spec
+# MCP Preventivi — Design Spec
 _Data: 2026-03-27_
 
 ## Obiettivo
@@ -18,7 +18,7 @@ PDF Preventivo
 RAG Agent (Agno)
      │  chiama tool MCP
      ▼
-MCP Server "iab-search"   ←── Python / FastMCP
+MCP Server "mcp-preventivi"   ←── Python / FastMCP
      │  SELECT su viste
      ▼
 SQL Views (IAB DB)         ←── logica di join incapsulata
@@ -34,7 +34,7 @@ Il server MCP è **read-only** e **agnostico allo schema fisico**: tutta la logi
 ## Struttura file
 
 ```
-mcp_iab/
+mcp_preventivi/
   server.py          # FastMCP server — 7 tool
   db.py              # connessione pyodbc (config da config.py esistente)
   embeddings.py      # gestione indice ChromaDB per ricerca semantica
