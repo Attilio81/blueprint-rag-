@@ -173,3 +173,34 @@ def test_get_prezzi_fornitore_nessun_risultato():
     with _mock_query([]) as _:
         from search import get_prezzi_fornitore
         assert get_prezzi_fornitore("INESISTENTE") == []
+
+
+CODICE_FORNITORE_SAMPLE = {
+    "codart": "VITE-M6",
+    "descrizione_articolo": "Vite M6x20 zincata",
+    "fornitore_conto": 9010001,
+    "fornitore_nome": "Ferramenta Rossi SRL",
+    "fornitore_piva": "01234567890",
+    "codice_fornitore": "ROS-VM6-20",
+    "note": "",
+}
+
+
+def test_cerca_per_codice_fornitore_senza_filtro():
+    with _mock_query([CODICE_FORNITORE_SAMPLE]) as mock_q:
+        from search import cerca_per_codice_fornitore
+        result = cerca_per_codice_fornitore("ROS-VM6-20")
+
+    assert result[0]["codart"] == "VITE-M6"
+    params = mock_q.call_args[0][1]
+    assert "ROS-VM6-20" in params
+    assert 9010001 not in params  # nessun filtro fornitore
+
+
+def test_cerca_per_codice_fornitore_con_filtro_fornitore():
+    with _mock_query([CODICE_FORNITORE_SAMPLE]) as mock_q:
+        from search import cerca_per_codice_fornitore
+        result = cerca_per_codice_fornitore("ROS-VM6-20", conto_fornitore=9010001)
+
+    params = mock_q.call_args[0][1]
+    assert 9010001 in params

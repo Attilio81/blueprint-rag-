@@ -78,3 +78,22 @@ def get_prezzi_fornitore(codart: str) -> list[dict]:
         ORDER BY prezzo
     """
     return db.query(sql, (codart,))
+
+
+def cerca_per_codice_fornitore(
+    codice: str, conto_fornitore: int | None = None
+) -> list[dict]:
+    """Trova articoli IAB dal codice riportato nel preventivo del fornitore."""
+    if conto_fornitore is not None:
+        sql = """
+            SELECT * FROM dbo.v_codici_fornitore
+            WHERE codice_fornitore = ? AND fornitore_conto = ?
+            ORDER BY fornitore_nome
+        """
+        return db.query(sql, (codice, conto_fornitore))
+    sql = """
+        SELECT * FROM dbo.v_codici_fornitore
+        WHERE codice_fornitore = ?
+        ORDER BY fornitore_nome
+    """
+    return db.query(sql, (codice,))
