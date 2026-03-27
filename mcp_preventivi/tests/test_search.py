@@ -21,6 +21,8 @@ def test_query_returns_list_of_dicts():
         {"codart": "ART-001", "descrizione": "Vite M6"},
         {"codart": "ART-002", "descrizione": "Dado M6"},
     ]
+    mock_cursor.close.assert_called_once()
+    mock_conn.close.assert_called_once()
 
 
 def test_query_with_params():
@@ -40,6 +42,8 @@ def test_query_with_params():
         "SELECT codart FROM v_articoli WHERE codart = ?", ("ART-001",)
     )
     assert result == [{"codart": "ART-001"}]
+    mock_cursor.close.assert_called_once()
+    mock_conn.close.assert_called_once()
 
 
 def _mock_query(return_value):

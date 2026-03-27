@@ -30,6 +30,10 @@ def cerca_simili(query_text: str, n_risultati: int = 10) -> list[dict]:
     """Ricerca semantica per descrizione simile usando embedding GeminiEmbedder."""
     embedder = _get_embedder()
     collection = _get_collection()
+    count = collection.count()
+    if count == 0:
+        return []
+    n_risultati = min(n_risultati, count)
     query_embedding = embedder.get_embedding(query_text)
     results = collection.query(
         query_embeddings=[query_embedding],

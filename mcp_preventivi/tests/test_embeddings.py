@@ -16,6 +16,7 @@ def test_cerca_simili_restituisce_lista():
     }
 
     mock_collection = MagicMock()
+    mock_collection.count.return_value = 10
     mock_collection.query.return_value = mock_results
 
     mock_embedder = MagicMock()

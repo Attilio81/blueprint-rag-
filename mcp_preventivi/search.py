@@ -88,13 +88,13 @@ def cerca_per_codice_fornitore(
     if conto_fornitore is not None:
         sql = """
             SELECT * FROM dbo.v_codici_fornitore
-            WHERE codice_fornitore = ? AND fornitore_conto = ?
+            WHERE UPPER(codice_fornitore) = UPPER(?) AND fornitore_conto = ?
             ORDER BY fornitore_nome
         """
         return db.query(sql, (codice, conto_fornitore))
     sql = """
         SELECT * FROM dbo.v_codici_fornitore
-        WHERE codice_fornitore = ?
+        WHERE UPPER(codice_fornitore) = UPPER(?)
         ORDER BY fornitore_nome
     """
     return db.query(sql, (codice,))

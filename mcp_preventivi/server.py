@@ -23,7 +23,7 @@ def cerca_articoli_simili(query: str, n_risultati: int = 10) -> list:
     Esempio: 'vite zincata' trova anche 'vite galvanizzata'.
     Richiede che l'indice sia stato costruito con index_articoli.py.
     """
-    return search.cerca_articoli_simili(query, n_risultati)
+    return search.cerca_articoli_simili(query, min(n_risultati, 50))
 
 
 @mcp.tool()

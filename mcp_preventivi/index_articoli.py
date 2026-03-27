@@ -18,7 +18,7 @@ def main():
     if len(articoli) > 500:
         print(f"ATTENZIONE: {len(articoli)} articoli da indicizzare. Stima: ~{len(articoli) // 60 + 1} minuti.")
 
-    print("Genero embedding e indicizzro in ChromaDB...")
+    print("Genero embedding e indicizzando in ChromaDB...")
     n = embeddings.index_articoli(articoli)
     print(f"Indicizzati {n} articoli in '{embeddings.CHROMA_PATH}'.")
 
