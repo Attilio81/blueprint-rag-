@@ -26,6 +26,20 @@ def cerca_articoli(query_text: str) -> list[dict]:
     tokens = query_text.strip().split()
     if not tokens:
         return []
-    where, params = _like_tokens(tokens, ["codart", "descrizione", "ISNULL(barcodes,'')"])
+
+    blocks = []
+    params = []
+    for token in tokens:
+        like = f"%{token}%"
+        # OR: codart LIKE ? OR descrizione LIKE ? OR barcode subquery
+        blocks.append(
+            "(UPPER(codart) LIKE UPPER(?)"
+            " OR UPPER(descrizione) LIKE UPPER(?)"
+            " OR EXISTS (SELECT 1 FROM dbo.barcode"
+            " WHERE codditt = 'IAB' AND bc_codart = codart AND UPPER(bc_code) LIKE UPPER(?)))"
+        )
+        params.extend([like, like, like])  # 3 params per token
+
+    where = " AND ".join(blocks)
     sql = f"SELECT TOP 50 * FROM dbo.v_articoli WHERE {where} ORDER BY codart"
     return db.query(sql, tuple(params))
