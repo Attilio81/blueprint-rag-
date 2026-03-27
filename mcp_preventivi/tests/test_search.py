@@ -137,3 +137,39 @@ def test_cerca_clienti_vuota():
     with _mock_query([]) as _:
         from search import cerca_clienti
         assert cerca_clienti("") == []
+
+
+PREZZO_SAMPLE = {
+    "codart": "VITE-M6",
+    "descrizione_articolo": "Vite M6x20 zincata",
+    "fornitore_conto": 9010001,
+    "fornitore_nome": "Ferramenta Rossi SRL",
+    "fornitore_piva": "01234567890",
+    "prezzo": 0.25,
+    "codice_listino": 1,
+    "nome_listino": "Listino Base",
+    "unita_misura": "PZ",
+    "quantita_da": 0.0,
+    "quantita_a": 9999999999.0,
+    "prezzo_netto": "N",
+    "data_inizio": "2024-01-01",
+    "data_scadenza": "2099-12-31",
+}
+
+
+def test_get_prezzi_fornitore():
+    with _mock_query([PREZZO_SAMPLE]) as mock_q:
+        from search import get_prezzi_fornitore
+        result = get_prezzi_fornitore("VITE-M6")
+
+    assert result[0]["prezzo"] == 0.25
+    assert result[0]["fornitore_nome"] == "Ferramenta Rossi SRL"
+    sql = mock_q.call_args[0][0]
+    assert "v_prezzi_acquisto" in sql
+    assert mock_q.call_args[0][1] == ("VITE-M6",)
+
+
+def test_get_prezzi_fornitore_nessun_risultato():
+    with _mock_query([]) as _:
+        from search import get_prezzi_fornitore
+        assert get_prezzi_fornitore("INESISTENTE") == []

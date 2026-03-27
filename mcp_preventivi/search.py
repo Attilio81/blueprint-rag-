@@ -67,3 +67,14 @@ def cerca_clienti(query_text: str) -> list[dict]:
     )
     sql = f"SELECT TOP 50 * FROM dbo.v_clienti WHERE {where} ORDER BY ragione_sociale"
     return db.query(sql, tuple(params))
+
+
+def get_prezzi_fornitore(codart: str) -> list[dict]:
+    """Prezzi d'acquisto validi oggi per un articolo, per tutti i fornitori."""
+    sql = """
+        SELECT *
+        FROM dbo.v_prezzi_acquisto
+        WHERE codart = ?
+        ORDER BY prezzo
+    """
+    return db.query(sql, (codart,))
