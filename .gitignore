@@ -8,6 +8,8 @@ Preventivi/
 # Database vettoriale (generato localmente)
 chroma_db/
 indexed.json
+mcp_preventivi/.chroma_iab/
+mcp_preventivi/embeddings_map.html
 
 # Visualizzazioni (contengono testo dei chunk)
 kb_*.html
