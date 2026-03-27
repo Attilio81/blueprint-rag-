@@ -2,6 +2,7 @@ agno
 chromadb
 pymupdf
 google-generativeai
+openai
 python-dotenv
 Pillow
 pytest

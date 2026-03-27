@@ -21,15 +21,46 @@ def is_corrupted_pdf(pdf_path: str) -> bool:
         doc.close()
 
 
+_SEPARATORS = ["\n\n", "\n", " ", ""]
+
+
 def _chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
-    """Splits text into chunks with overlap."""
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-    return chunks
+    """Splits text on the coarsest boundary that fits: paragraph, line, word, character."""
+    for sep in _SEPARATORS:
+        if sep == "":
+            chunks, start = [], 0
+            while start < len(text):
+                end = start + chunk_size
+                chunks.append(text[start:end].strip())
+                start += chunk_size - overlap
+            return [c for c in chunks if c]
+
+        parts = [p for p in text.split(sep) if p.strip()]
+        if len(parts) <= 1:
+            continue
+
+        chunks, current, current_len = [], [], 0
+        for part in parts:
+            add_len = len(part) + (len(sep) if current else 0)
+            if current_len + add_len > chunk_size and current:
+                chunks.append(sep.join(current).strip())
+                tail, tail_len = [], 0
+                for p in reversed(current):
+                    extra = len(p) + (len(sep) if tail else 0)
+                    if tail_len + extra <= overlap:
+                        tail.insert(0, p)
+                        tail_len += extra
+                    else:
+                        break
+                current, current_len = tail, tail_len
+            current.append(part)
+            current_len += len(part) + (len(sep) if len(current) > 1 else 0)
+
+        if current:
+            chunks.append(sep.join(current).strip())
+        return [c for c in chunks if c]
+
+    return [text] if text.strip() else []
 
 
 def extract_text_chunks(pdf_path: str) -> list[dict]:
