@@ -247,3 +247,16 @@ def test_confronta_fornitori_nessun_fornitore():
     with _mock_query([]) as _:
         from search import confronta_fornitori
         assert confronta_fornitori("INESISTENTE") == []
+
+
+def test_cerca_articoli_simili():
+    sample = [
+        {"codart": "VITE-M6", "descrizione": "Vite M6x20 zincata",
+         "unita_misura": "PZ", "bloccato": "N", "esaurito": "N", "score": 0.1},
+    ]
+    with patch("search.embeddings.cerca_simili", return_value=sample) as mock_emb:
+        from search import cerca_articoli_simili
+        result = cerca_articoli_simili("vite zincata", n_risultati=5)
+
+    assert result[0]["score"] == 0.1
+    mock_emb.assert_called_once_with("vite zincata", 5)

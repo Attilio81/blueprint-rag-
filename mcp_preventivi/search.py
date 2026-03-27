@@ -1,5 +1,6 @@
 # mcp_preventivi/search.py
 import db
+import embeddings
 
 
 def _like_tokens(tokens: list[str], fields: list[str]) -> tuple[str, list]:
@@ -119,3 +120,10 @@ def confronta_fornitori(codart: str) -> list[dict]:
         ORDER BY p.prezzo
     """
     return db.query(sql, (codart,))
+
+
+def cerca_articoli_simili(query_text: str, n_risultati: int = 10) -> list[dict]:
+    """Ricerca semantica articoli: trova descrizioni simili anche con sinonimi.
+    Richiede indice costruito con index_articoli.py.
+    """
+    return embeddings.cerca_simili(query_text, n_risultati)
