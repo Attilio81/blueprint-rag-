@@ -6,6 +6,7 @@ from agno.db.in_memory import InMemoryDb
 from agno.tools.websearch import WebSearchTools
 from knowledge import build_knowledge
 from config import PROJECT_CONTEXT
+from catalogo_tools import CatalogoTools
 
 load_dotenv()
 
@@ -38,7 +39,7 @@ def build_chat_agent() -> Agent:
         search_knowledge=True,
         db=InMemoryDb(),
         add_history_to_context=True,
-        tools=[WebSearchTools()],
+        tools=[WebSearchTools(), CatalogoTools()],
         instructions=[
             "Sei un assistente specializzato nell'analisi di preventivi edilizi.",
             f"Il progetto è {PROJECT_CONTEXT}.",
@@ -47,7 +48,8 @@ def build_chat_agent() -> Agent:
             "Per gli importi specifica sempre se IVA inclusa o esclusa.",
             "Se non trovi l'informazione nel knowledge base, dillo chiaramente.",
             "Rispondi sempre in italiano.",
-            "Usa lo strumento di ricerca web SOLO se l'utente chiede esplicitamente di cercare online, trovare fornitori, cercare alternative sul mercato, o usa parole come 'cerca sul web', 'trova online', 'fornitori alternativi'. Per qualsiasi domanda sui preventivi usa sempre e solo il knowledge base.",
+            "Usa lo strumento di ricerca web SOLO se l'utente chiede esplicitamente di cercare online o usa parole come 'cerca sul web', 'trova online'.",
+            "Usa i tool del catalogo (cerca_articoli_catalogo, cerca_per_codice_fornitore, confronta_fornitori) quando l'utente chiede di confrontare prezzi, trovare fornitori alternativi, verificare se un articolo è presente nel catalogo interno, o controllare se c'è un prezzo migliore per un articolo del preventivo.",
         ],
         markdown=True,
     )
