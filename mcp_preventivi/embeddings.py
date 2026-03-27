@@ -16,9 +16,14 @@ def _get_embedder():
     return GeminiEmbedder(id=EMBEDDING_MODEL, dimensions=EMBEDDING_DIMENSIONS)
 
 
+_chroma_client = None  # type: chromadb.ClientAPI | None  # lazy singleton
+
+
 def _get_collection():
-    client = chromadb.PersistentClient(path=CHROMA_PATH)
-    return client.get_or_create_collection(COLLECTION_NAME)
+    global _chroma_client
+    if _chroma_client is None:
+        _chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
+    return _chroma_client.get_or_create_collection(COLLECTION_NAME)
 
 
 def cerca_simili(query_text: str, n_risultati: int = 10) -> list[dict]:
@@ -37,7 +42,12 @@ def cerca_simili(query_text: str, n_risultati: int = 10) -> list[dict]:
 
 
 def index_articoli(articoli: list[dict]) -> int:
-    """Indicizza una lista di articoli in ChromaDB. Restituisce il numero indicizzato."""
+    """Indicizza una lista di articoli in ChromaDB. Restituisce il numero indicizzato.
+
+    NOTA PRESTAZIONI: genera un embedding per articolo (una chiamata API per volta).
+    Per cataloghi grandi (>1000 articoli) l'operazione può richiedere diversi minuti
+    e potrebbe superare le quote API. Considerare di eseguire in orari off-peak.
+    """
     embedder = _get_embedder()
     collection = _get_collection()
     ids, embeddings, metadatas = [], [], []

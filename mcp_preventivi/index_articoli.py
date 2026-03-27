@@ -15,6 +15,8 @@ def main():
     print("Carico articoli da v_articoli...")
     articoli = db.query("SELECT codart, descrizione, unita_misura, bloccato, esaurito FROM dbo.v_articoli")
     print(f"Trovati {len(articoli)} articoli.")
+    if len(articoli) > 500:
+        print(f"ATTENZIONE: {len(articoli)} articoli da indicizzare. Stima: ~{len(articoli) // 60 + 1} minuti.")
 
     print("Genero embedding e indicizzro in ChromaDB...")
     n = embeddings.index_articoli(articoli)
