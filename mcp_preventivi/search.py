@@ -97,3 +97,25 @@ def cerca_per_codice_fornitore(
         ORDER BY fornitore_nome
     """
     return db.query(sql, (codice,))
+
+
+def confronta_fornitori(codart: str) -> list[dict]:
+    """Tabella comparativa fornitori: prezzo + codice fornitore per articolo."""
+    sql = """
+        SELECT
+            p.fornitore_nome,
+            p.fornitore_conto,
+            c.codice_fornitore,
+            p.prezzo,
+            p.unita_misura,
+            p.quantita_da,
+            p.quantita_a,
+            p.data_scadenza
+        FROM dbo.v_prezzi_acquisto p
+        LEFT JOIN dbo.v_codici_fornitore c
+            ON  p.codart           = c.codart
+            AND p.fornitore_conto  = c.fornitore_conto
+        WHERE p.codart = ?
+        ORDER BY p.prezzo
+    """
+    return db.query(sql, (codart,))

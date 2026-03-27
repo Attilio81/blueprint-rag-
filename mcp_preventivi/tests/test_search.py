@@ -204,3 +204,46 @@ def test_cerca_per_codice_fornitore_con_filtro_fornitore():
 
     params = mock_q.call_args[0][1]
     assert 9010001 in params
+
+
+CONFRONTO_SAMPLE = [
+    {
+        "fornitore_nome": "Ferramenta Rossi SRL",
+        "fornitore_conto": 9010001,
+        "codice_fornitore": "ROS-VM6-20",
+        "prezzo": 0.25,
+        "unita_misura": "PZ",
+        "quantita_da": 0.0,
+        "quantita_a": 9999999999.0,
+        "data_scadenza": "2099-12-31",
+    },
+    {
+        "fornitore_nome": "Bulloneria Verdi SNC",
+        "fornitore_conto": 9020001,
+        "codice_fornitore": None,
+        "prezzo": 0.22,
+        "unita_misura": "PZ",
+        "quantita_da": 0.0,
+        "quantita_a": 9999999999.0,
+        "data_scadenza": "2099-12-31",
+    },
+]
+
+
+def test_confronta_fornitori():
+    with _mock_query(CONFRONTO_SAMPLE) as mock_q:
+        from search import confronta_fornitori
+        result = confronta_fornitori("VITE-M6")
+
+    assert len(result) == 2
+    assert result[0]["prezzo"] == 0.25
+    sql = mock_q.call_args[0][0]
+    assert "v_prezzi_acquisto" in sql
+    assert "v_codici_fornitore" in sql
+    assert mock_q.call_args[0][1] == ("VITE-M6",)
+
+
+def test_confronta_fornitori_nessun_fornitore():
+    with _mock_query([]) as _:
+        from search import confronta_fornitori
+        assert confronta_fornitori("INESISTENTE") == []
