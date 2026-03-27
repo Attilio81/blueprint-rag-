@@ -14,8 +14,11 @@ kb_*.html
 
 # Documentazione interna di progetto (ma non i design spec)
 docs/*
-!docs/superpowers/
 !docs/come_funziona.md
+
+# Superpowers (strumenti interni di sviluppo)
+.superpowers/
+docs/superpowers/
 PRD_RAG_Agent_Preventivi.md
 
 # Session data Claude Code
