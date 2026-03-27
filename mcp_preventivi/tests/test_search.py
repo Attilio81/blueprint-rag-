@@ -40,3 +40,47 @@ def test_query_with_params():
         "SELECT codart FROM v_articoli WHERE codart = ?", ("ART-001",)
     )
     assert result == [{"codart": "ART-001"}]
+
+
+def _mock_query(return_value):
+    """Helper: restituisce un patch su db.query."""
+    return patch("search.db.query", return_value=return_value)
+
+
+ARTICOLO_SAMPLE = {
+    "codart": "VITE-M6",
+    "descrizione": "Vite M6x20 zincata",
+    "unita_misura": "PZ",
+    "bloccato": "N",
+    "esaurito": "N",
+    "barcodes": "8001234567890",
+}
+
+
+def test_cerca_articoli_per_descrizione():
+    with _mock_query([ARTICOLO_SAMPLE]) as mock_q:
+        from search import cerca_articoli
+        result = cerca_articoli("vite zincata")
+
+    assert len(result) == 1
+    assert result[0]["codart"] == "VITE-M6"
+    # verifica che entrambi i token siano nella query
+    sql_called = mock_q.call_args[0][0].upper()
+    assert "LIKE" in sql_called
+
+
+def test_cerca_articoli_vuota_restituisce_lista_vuota():
+    with _mock_query([]) as _:
+        from search import cerca_articoli
+        result = cerca_articoli("")
+    assert result == []
+
+
+def test_cerca_articoli_token_multipli():
+    with _mock_query([ARTICOLO_SAMPLE]) as mock_q:
+        from search import cerca_articoli
+        cerca_articoli("vite m6 zincat")
+
+    # con 3 token deve avere 3 blocchi di condizioni
+    params = mock_q.call_args[0][1]
+    assert len(params) == 9  # 3 token × 3 campi (codart, descrizione, barcodes)
